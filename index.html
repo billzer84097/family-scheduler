@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Family Summer 2026</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --accent: #3498db;
+            --busy: #e74c3c;
+            --light: #f8f9fa;
+        }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 10px; background: #f0f2f5; }
+        
+        /* MAIN CONTAINER */
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        
+        h1 { text-align: center; color: var(--primary); margin-top: 0; }
+        .subtitle { text-align: center; color: #666; margin-bottom: 20px; font-size: 0.9rem; }
+
+        /* --- FAMILY SELECTOR (UPDATED) --- */
+        .family-selector-container {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 2px solid #bee5eb;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 25px;
+        }
+        
+        .family-selector-container label {
+            display: block;
+            font-size: 1.1rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        select#familySelect {
+            display: block;
+            width: 100%;
+            max-width: 400px;
+            margin: 0 auto;
+            padding: 12px;
+            font-size: 1.1rem;
+            border: 2px solid #17a2b8;
+            border-radius: 5px;
+            background: white;
+            cursor: pointer;
+        }
+        /* -------------------------------- */
+
+        /* Calendar Grid */
+        .month-block { margin-bottom: 30px; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; }
+        .month-name { background: var(--primary); color: white; text-align: center; padding: 10px; font-weight: bold; }
+        .grid { display: grid; grid-template-columns: repeat(7, 1fr); }
+        .day-header { background: #eee; text-align: center; font-size: 0.75rem; padding: 5px 0; font-weight: bold; color: #555; }
+        
+        .day { 
+            aspect-ratio: 1; border-right: 1px solid #eee; border-bottom: 1px solid #eee; 
+            position: relative; cursor: pointer; background: white;
+        }
+        .day:nth-child(7n) { border-right: none; }
+        .day-num { position: absolute; top: 4px; left: 4px; font-size: 0.8rem; color: #444; }
+        
+        /* Busy Indicators */
+        .busy-marker {
+            position: absolute; bottom: 4px; right: 4px;
+            background: var(--busy); color: white;
+            font-size: 0.65rem; padding: 2px 6px; border-radius: 10px;
+            font-weight: bold;
+        }
+        .day.is-busy { background-color: #fff0f0; }
+
+        /* Modal */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 100; justify-content: center; align-items: center; }
+        .modal { background: white; width: 90%; max-width: 400px; padding: 20px; border-radius: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        .modal h3 { margin-top: 0; color: var(--primary); }
+        .modal-date { font-size: 0.9rem; color: #666; margin-bottom: 15px; }
+        
+        textarea { width: 100%; height: 80px; padding: 10px; border: 1px solid #ccc; border-radius: 4px; margin-bottom: 10px; box-sizing: border-box; font-family: sans-serif; font-size: 1rem; }
+        
+        .btn-group { display: flex; justify-content: space-between; margin-top: 15px; }
+        button { padding: 12px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 1rem; }
+        .btn-save { background: var(--accent); color: white; }
+        .btn-cancel { background: #ccc; color: #333; }
+
+        .other-notes { margin-top: 15px; background: #f9f9f9; padding: 10px; border-radius: 4px; font-size: 0.85rem; max-height: 100px; overflow-y: auto; }
+        .note-item { margin-bottom: 5px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        .note-item strong { color: var(--primary); }
+
+        #loading { display: none; text-align: center; padding: 20px; color: var(--accent); font-weight: bold; }
+        
+        /* Mobile adjustments */
+        @media (max-width: 600px) {
+            .container { padding: 10px; }
+            .day-num { font-size: 0.7rem; }
+            .busy-marker { font-size: 0.6rem; padding: 1px 4px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Summer 2026 Planner</h1>
+    <p class="subtitle">May • June • July • August • September</p>
+
+    <!-- FAMILY SELECTION DROPDOWN -->
+    <div class="family-selector-container">
+        <label for="familySelect">⬇️ Select Your Family Here ⬇️</label>
+        <select id="familySelect">
+            <option value="" disabled selected>-- Click to Choose --</option>
+            <option value="Bill & Shirlene">Bill & Shirlene</option>
+            <option value="Marty & Leyah">Marty & Leyah's Family</option>
+            <option value="Jared & Jen">Jared & Jen's Family</option>
+            <option value="Shannon & Jared">Shannon & Jared's Family</option>
+            <option value="Chris & Becka">Chris & Becka's Family</option>
+            <option value="Tyler & Jess">Tyler & Jess' Family</option>
+        </select>
+    </div>
+
+    <div id="loading">Loading calendar data...</div>
+    <div id="calendar-wrapper"></div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modalOverlay">
+    <div class="modal">
+        <h3 id="modalTitle">Edit Availability</h3>
+        <div class="modal-date" id="modalDateDisplay"></div>
+        
+        <label style="font-size: 0.9rem; font-weight: bold; display:block; margin-bottom:5px;">Reason for being busy:</label>
+        <textarea id="noteInput" placeholder="e.g. Camping, Work, Anniversary... (Leave empty if you are free)"></textarea>
+        
+        <div class="other-notes" id="otherNotesList" style="display:none;">
+            <!-- Other families' notes go here -->
+        </div>
+
+        <div class="btn-group">
+            <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+            <button class="btn-save" onclick="saveNote()">Save</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ******************************************************
+    // PASTE YOUR GOOGLE APPS SCRIPT WEB APP URL HERE
+    // ******************************************************
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbydcXKrA-0Ir6KH4HqkCjMfmFF0Z2HhWF394kdSoqHaXjT9p7HsP-qAWQKLbe05j73C/exec"; 
+    // ******************************************************
+
+    const months = [
+        { name: "May", index: 4 }, { name: "June", index: 5 },
+        { name: "July", index: 6 }, { name: "August", index: 7 },
+        { name: "September", index: 8 }
+    ];
+    const year = 2026;
+
+    let scheduleData = []; // Stores fetched data
+    let currentSelectedDate = null;
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+        fetchData();
+    });
+
+    function fetchData() {
+        document.getElementById('loading').style.display = 'block';
+        document.getElementById('calendar-wrapper').style.opacity = '0.3';
+
+        fetch(SCRIPT_URL)
+            .then(response => response.json())
+            .then(data => {
+                scheduleData = data;
+                renderCalendars();
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('calendar-wrapper').style.opacity = '1';
+            })
+            .catch(err => {
+                console.error(err);
+                // Even if error, render calendar so they see the UI
+                renderCalendars();
+                document.getElementById('loading').innerText = "Could not load data. Check URL.";
+            });
+    }
+
+    function renderCalendars() {
+        const wrapper = document.getElementById('calendar-wrapper');
+        wrapper.innerHTML = '';
+
+        months.forEach(month => {
+            const monthDiv = document.createElement('div');
+            monthDiv.className = 'month-block';
+
+            // Header
+            const header = document.createElement('div');
+            header.className = 'month-name';
+            header.innerText = `${month.name} ${year}`;
+            monthDiv.appendChild(header);
+
+            // Grid
+            const grid = document.createElement('div');
+            grid.className = 'grid';
+
+            // Day Headers
+            ['S','M','T','W','T','F','S'].forEach(d => {
+                const dh = document.createElement('div');
+                dh.className = 'day-header';
+                dh.innerText = d;
+                grid.appendChild(dh);
+            });
+
+            // Days
+            const firstDay = new Date(year, month.index, 1).getDay();
+            const daysInMonth = new Date(year, month.index + 1, 0).getDate();
+
+            // Blanks
+            for(let i=0; i<firstDay; i++) {
+                const blank = document.createElement('div');
+                blank.className = 'day';
+                blank.style.background = '#f9f9f9';
+                blank.style.cursor = 'default';
+                grid.appendChild(blank);
+            }
+
+            // Dates
+            for(let d=1; d<=daysInMonth; d++) {
+                const dayCell = document.createElement('div');
+                dayCell.className = 'day';
+                
+                const dateKey = `${year}-${String(month.index+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+                
+                // Check busy count
+                const busyFamilies = scheduleData.filter(item => item.date === dateKey);
+                
+                dayCell.innerHTML = `<span class="day-num">${d}</span>`;
+                
+                if(busyFamilies.length > 0) {
+                    dayCell.classList.add('is-busy');
+                    const marker = document.createElement('div');
+                    marker.className = 'busy-marker';
+                    marker.innerText = `${busyFamilies.length} Busy`;
+                    dayCell.appendChild(marker);
+                }
+
+                dayCell.onclick = () => openModal(dateKey, busyFamilies);
+                grid.appendChild(dayCell);
+            }
+
+            monthDiv.appendChild(grid);
+            wrapper.appendChild(monthDiv);
+        });
+    }
+
+    function openModal(dateKey, busyList) {
+        const familySelect = document.getElementById('familySelect');
+        
+        // Validation: Must select family first
+        if(!familySelect.value) {
+            alert("Please select your family name at the top of the page first!");
+            familySelect.focus();
+            familySelect.scrollIntoView({behavior: "smooth"});
+            return;
+        }
+
+        currentSelectedDate = dateKey;
+        document.getElementById('modalOverlay').style.display = 'flex';
+        document.getElementById('modalDateDisplay').innerText = new Date(dateKey + "T00:00:00").toDateString();
+        
+        // Find my current note
+        const myFamily = familySelect.value;
+        const myEntry = busyList.find(x => x.family === myFamily);
+        document.getElementById('noteInput').value = myEntry ? myEntry.note : '';
+
+        // Show others
+        const othersList = document.getElementById('otherNotesList');
+        othersList.innerHTML = '';
+        const others = busyList.filter(x => x.family !== myFamily);
+        
+        if(others.length > 0) {
+            othersList.style.display = 'block';
+            const header = document.createElement('div');
+            header.innerHTML = "<strong>Others busy this day:</strong>";
+            header.style.marginBottom = "5px";
+            othersList.appendChild(header);
+
+            others.forEach(o => {
+                const div = document.createElement('div');
+                div.className = 'note-item';
+                div.innerHTML = `<strong>${o.family}:</strong> ${o.note}`;
+                othersList.appendChild(div);
+            });
+        } else {
+            othersList.style.display = 'none';
+        }
+    }
+
+    function closeModal() {
+        document.getElementById('modalOverlay').style.display = 'none';
+    }
+
+    function saveNote() {
+        const family = document.getElementById('familySelect').value;
+        const note = document.getElementById('noteInput').value;
+        const btn = document.querySelector('.btn-save');
+        
+        const originalText = btn.innerText;
+        btn.innerText = "Saving...";
+        btn.disabled = true;
+
+        const formData = new URLSearchParams();
+        formData.append('action', 'save');
+        formData.append('date', currentSelectedDate);
+        formData.append('family', family);
+        formData.append('note', note);
+
+        fetch(SCRIPT_URL + "?" + formData.toString(), {
+            method: "POST" 
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.result === 'success') {
+                closeModal();
+                fetchData(); // Refresh calendar
+            } else {
+                alert("Error saving.");
+            }
+        })
+        .catch(e => { console.error(e); alert("Connection error. Check internet."); })
+        .finally(() => {
+            btn.innerText = originalText;
+            btn.disabled = false;
+        });
+    }
+</script>
+
+</body>
+</html>
